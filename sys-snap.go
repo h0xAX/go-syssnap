@@ -122,8 +122,40 @@ func (p *pParser) getSystemUptime() float64 {
 	load, err := rdr.ReadString(' ')
 	checkErr(err)
 	load = strings.TrimSpace(load)
-	if load, err = strconv.ParseFloat(load, 64); err != nil {
-		return load
+	if ld, err := strconv.ParseFloat(load, 64); err != nil {
+		return ld
 	}
 	return 0.0
+}
+
+func (p *pParser) getSysInfo() {
+	file, err := os.Open("/proc/loadavg")
+	checkErr(err)
+	rdr := bufio.NewReader(file)
+	for _, i := range []string{"load1", "load5", "load15"} {
+		l, err := rdr.ReadString(' ')
+		checkErr(err)
+		l = strings.TrimSpace(l)
+		p.Sysinfo[i] = l
+	}
+	file.Close()
+	file, err = os.Open("/proc/meminfo")
+	checkErr(err)
+	scanner := bufio.NewScanner(file)
+
+	tmp := make(map[string]string)
+	for scanner.Scan() {
+		line := scanner.Text()
+		key := strings.Split(line, ":")[0]
+		val := strings.TrimSpace(strings.Split(line, ":")[1])
+		tmp[key] = val
+	}
+
+	for _, i := range []string{"MemTotal", "MemFree", "Buffers", "Cached", "SwapTotal", "SwapFree"} {
+		if v, ok := tmp[i]; ok {
+			p.Sysinfo[i] = v
+		} else {
+			p.Sysinfo[i] = ""
+		}
+	}
 }
