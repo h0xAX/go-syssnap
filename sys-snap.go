@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -102,4 +104,26 @@ func writeToLog(queuer chan map[string]interface{}) {
 		checkErr(err)
 	}
 
+}
+
+type pParser struct {
+	SystemStarttime int
+	Processes       map[string]string
+	Sockets         map[string]string
+	Sysinfo         map[string]string
+}
+
+func (p *pParser) getSystemUptime() float64 {
+	file, err := os.Open("/proc/uptime")
+	checkErr(err)
+	defer file.Close()
+
+	rdr := bufio.NewReader(file)
+	load, err := rdr.ReadString(' ')
+	checkErr(err)
+	load = strings.TrimSpace(load)
+	if load, err = strconv.ParseFloat(load, 64); err != nil {
+		return load
+	}
+	return 0.0
 }
